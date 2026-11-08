@@ -1,226 +1,801 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Solar Invest - Meu Lucro</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Urban Açaí - Gestão & Impressão</title>
+
+    <!-- Configurações PWA -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0b0f19">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="UrbanAçaí">
+    <link rel="apple-touch-icon" href="./urban.jpg">
+
+    <!-- CDNs: Fontes, Ícones e Utilitários -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome (Ícones) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Fonte Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: '#0b0f19',
+                            card: '#141c2e',
+                            pink: '#ec4899',
+                            purple: '#a855f7',
+                            green: '#22c55e',
+                            amber: '#f59e0b'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- OneSignal Web SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+                appId: "919f0630-7d73-451a-8818-c1be42435f0d",
+                notifyButton: { enable: true },
+                allowLocalhostAsSecureOrigin: true,
+            });
+        });
+    </script>
+
+    <!-- PapaParse (CSV Parser) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <style>
         body {
-            font-family: 'Inter', sans-serif;
             background-color: #0b0f19;
-            color: #ffffff;
+            color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
-        .card-shadow {
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+
+        .glass-card {
+            background: rgba(20, 28, 46, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
+
+        .glass-card-hover {
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card-hover:active {
+            transform: scale(0.98);
+        }
+
+        @media (min-width: 640px) {
+            .glass-card-hover:hover {
+                transform: translateY(-3px);
+                border-color: rgba(236, 72, 153, 0.4);
+                box-shadow: 0 14px 35px -10px rgba(236, 72, 153, 0.25);
+            }
+        }
+
+        .pulse-live {
+            width: 10px;
+            height: 10px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            animation: pulse-ring 1.8s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 6px; }
     </style>
 </head>
-<body class="p-4 max-w-md mx-auto min-h-screen flex flex-col justify-between">
+<body class="min-h-screen pb-16 antialiased selection:bg-pink-500 selection:text-white">
 
-    <div>
-        <!-- CABEÇALHO -->
-        <header class="flex items-center justify-between py-3 mb-4 border-b border-slate-800">
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" class="fixed top-4 right-4 left-4 sm:left-auto sm:w-96 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-40 bg-[#0b0f19]/85 backdrop-blur-md border-b border-white/10 px-4 py-3.5">
+        <div class="max-w-5xl mx-auto flex justify-between items-center gap-2">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                    <i class="fa-solid fa-sun text-2xl"></i>
-                </div>
+                <img src="./urban.jpg" alt="Urban Açaí" class="w-11 h-11 rounded-2xl object-cover border border-pink-500/40 shadow-lg shadow-pink-500/20" onerror="this.src='https://via.placeholder.com/100?text=Açai'">
                 <div>
-                    <h1 class="text-xl font-black text-white leading-tight">Solar Invest</h1>
-                    <p class="text-xs text-slate-400 font-medium">Painel do Sócio</p>
+                    <h1 class="font-black text-lg text-white tracking-tight leading-none flex items-center gap-2">
+                        Urban Açaí
+                        <span class="text-[10px] bg-pink-500/20 text-pink-400 font-extrabold px-2 py-0.5 rounded-md border border-pink-500/30">PRO</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 font-semibold mt-1 flex items-center gap-2">
+                        <span class="pulse-live"></span> Sistema de Vendas & Térmica
+                    </p>
                 </div>
             </div>
-            <button onclick="recarregarDados()" class="p-3 bg-slate-800 active:bg-slate-700 rounded-xl text-slate-300">
-                <i class="fa-solid fa-rotate-right text-lg"></i>
-            </button>
-        </header>
 
-        <!-- SELETOR DE MÊS GRANDE -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-2 mb-5 flex items-center justify-between">
-            <button onclick="mudarMes(-1)" class="w-12 h-12 bg-slate-800 active:bg-emerald-600 rounded-xl flex items-center justify-center text-white text-lg">
-                <i class="fa-solid fa-chevron-left"></i>
-            </button>
-            <div class="text-center">
-                <span class="text-xs uppercase font-bold tracking-wider text-slate-400 block">Período</span>
-                <span id="label-mes" class="text-lg font-black text-white capitalize">Outubro</span>
+            <div class="flex items-center gap-2">
+                <!-- Botão de Configuração (Preparador & Planilha) -->
+                <button onclick="abrirModalConfig()" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95 border border-white/10 flex items-center gap-2" title="Configurações do Sistema">
+                    <i class="fa-solid fa-gear text-xs text-pink-400"></i>
+                    <span id="label-preparador-nome" class="hidden md:inline text-xs font-bold text-slate-200">Junim</span>
+                </button>
+
+                <!-- Notificações Nativas -->
+                <button onclick="solicitarPermissaoNotificacao()" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95 border border-white/10" title="Ativar Notificações">
+                    <i class="fa-solid fa-bell text-xs"></i>
+                </button>
+
+                <!-- Sincronização Manual -->
+                <button onclick="buscarPedidosAcaiSheet()" class="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-lg shadow-pink-500/20 transition active:scale-95">
+                    <i class="fa-solid fa-rotate text-xs" id="sync-icon"></i>
+                    <span class="hidden sm:inline">Atualizar</span>
+                </button>
             </div>
-            <button onclick="mudarMes(1)" class="w-12 h-12 bg-slate-800 active:bg-emerald-600 rounded-xl flex items-center justify-center text-white text-lg">
-                <i class="fa-solid fa-chevron-right"></i>
-            </button>
         </div>
+    </header>
 
-        <!-- CARD PRINCIPAL: LUCRO TOTAL DO SÓCIO -->
-        <div class="bg-gradient-to-br from-emerald-900/40 via-slate-900 to-slate-900 border-2 border-emerald-500/50 rounded-3xl p-6 text-center mb-6 card-shadow">
-            <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full mb-3">
-                <i class="fa-solid fa-wallet text-emerald-400 text-sm"></i>
-                <span class="text-xs font-bold uppercase text-emerald-300 tracking-wide">Sua Parte do Lucro</span>
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="max-w-5xl mx-auto px-4 pt-5 space-y-5">
+
+        <!-- ALERTA PLANILHA NÃO CONFIGURADA -->
+        <div id="alert-no-sheet" class="hidden glass-card p-5 rounded-2xl border-l-4 border-l-amber-500 bg-amber-500/10 space-y-3">
+            <div class="flex items-center gap-3 text-amber-400">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                <h3 class="font-extrabold text-sm">Planilha Google Não Configurada</h3>
             </div>
-            
-            <div id="lucro-total-socio" class="text-4xl sm:text-5xl font-black text-emerald-400 tracking-tight my-2">
-                R$ 0,00
-            </div>
-            
-            <p class="text-xs text-slate-400 font-medium">
-                Valor líquido já dividido em 50%
+            <p class="text-xs text-slate-300 leading-relaxed">
+                Você ainda não inseriu o link ou ID da planilha Google Sheets. Clique no botão abaixo para adicionar. A informação ficará salva automaticamente no seu navegador.
             </p>
+            <button onclick="abrirModalConfig()" class="px-4 py-2 bg-amber-500 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider transition active:scale-95">
+                Configurar Agora
+            </button>
         </div>
 
-        <!-- TÍTULO DA LISTA -->
-        <div class="flex items-center justify-between mb-3 px-1">
-            <h2 class="text-base font-bold text-slate-200">Detalhamento por Cliente</h2>
-            <span id="qtd-clientes" class="text-xs font-bold bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg">3 Clientes</span>
+        <!-- METRICAS -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="glass-card p-4 rounded-2xl border-l-4 border-l-pink-500">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Pedidos Lidos</span>
+                <h3 id="stat-total-pedidos" class="text-2xl font-black text-white">0</h3>
+            </div>
+            <div class="glass-card p-4 rounded-2xl border-l-4 border-l-purple-500">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Copos Vendidos</span>
+                <h3 id="stat-total-copos" class="text-2xl font-black text-purple-400">0</h3>
+            </div>
+            <div class="glass-card p-4 rounded-2xl border-l-4 border-l-emerald-500">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Status Impressora</span>
+                <div class="flex items-center gap-2 mt-1">
+                    <i class="fa-solid fa-print text-emerald-400 text-base"></i>
+                    <span class="text-xs font-bold text-emerald-400">RawBT Pronta</span>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-2xl border-l-4 border-l-amber-500 col-span-2 sm:col-span-1">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Última Leitura</span>
+                <h3 id="stat-ultima-atualizacao" class="text-xs font-bold text-slate-200 mt-1.5">--:--:--</h3>
+            </div>
         </div>
 
-        <!-- LISTA DE CARDS DE CLIENTES -->
-        <div id="lista-clientes" class="space-y-3">
-            <!-- Os cards dos clientes serão gerados aqui dinamicamente -->
+        <!-- BARRA DE BUSCA -->
+        <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="input-busca" onkeyup="filtrarPedidos()" placeholder="Buscar por cliente, endereço, bairro ou copo..." class="w-full bg-slate-900/90 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500/80 transition shadow-inner">
+        </div>
+
+        <!-- INDICADOR DE CARREGAMENTO -->
+        <div id="loading-state" class="text-center py-20 space-y-3">
+            <i class="fa-solid fa-circle-notch text-4xl text-pink-500 animate-spin"></i>
+            <p class="text-sm font-semibold text-slate-400">Carregando pedidos da planilha...</p>
+        </div>
+
+        <!-- CONTAINER DOS PEDIDOS -->
+        <div id="pedidos-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden"></div>
+
+    </main>
+
+    <!-- MODAL COMPROVANTE & WHATSAPP -->
+    <div id="modal-whatsapp" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 transition-all duration-300">
+        <div class="glass-card w-full max-w-lg rounded-3xl p-6 space-y-4 border border-white/15 animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col justify-between">
+            
+            <div class="flex justify-between items-center pb-3 border-b border-white/10 flex-shrink-0">
+                <div class="flex items-center gap-2 text-emerald-400 font-extrabold text-base">
+                    <i class="fa-brands fa-whatsapp text-xl"></i>
+                    <span>Comprovante de Pedido</span>
+                </div>
+                <button onclick="fecharModalWhatsapp()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-1 flex-1 overflow-hidden flex flex-col">
+                <label class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Preview para Envio / Impressão</label>
+                <pre id="ticket-text-preview" class="w-full bg-slate-950/90 border border-slate-800 rounded-2xl p-4 text-xs font-mono text-slate-200 whitespace-pre-wrap overflow-y-auto leading-relaxed border-dashed flex-1"></pre>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 flex-shrink-0">
+                <button onclick="copiarTextoPedido()" class="py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition active:scale-95 border border-white/10">
+                    <i class="fa-solid fa-copy text-pink-400"></i>
+                    <span>Copiar</span>
+                </button>
+                
+                <button id="btn-modal-print-rawbt" onclick="" class="py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-lg shadow-amber-500/20">
+                    <i class="fa-solid fa-print text-sm"></i>
+                    <span>RawBT</span>
+                </button>
+
+                <a id="btn-link-whatsapp" href="#" target="_blank" class="py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-lg shadow-emerald-500/20 text-center">
+                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                    <span>WhatsApp</span>
+                </a>
+            </div>
         </div>
     </div>
 
-    <!-- RODAPÉ SIMPLES -->
-    <footer class="text-center py-4 mt-6 text-slate-500 text-xs border-t border-slate-900">
-        Solar Invest • Atualizado automaticamente
-    </footer>
+    <!-- MODAL UNIFICADO DE CONFIGURAÇÕES (PREPARADOR E PLANILHA GOOGLE) -->
+    <div id="modal-config" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="glass-card w-full max-w-md rounded-3xl p-6 space-y-4 border border-white/15">
+            <div class="flex justify-between items-center pb-2 border-b border-white/10">
+                <h3 class="font-extrabold text-white text-base flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-pink-400"></i>
+                    Configurações do Sistema
+                </h3>
+                <button onclick="fecharModalConfig()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
 
+            <div class="space-y-4">
+                <!-- Nome do Preparador -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-300">Nome do Atendente / Preparador</label>
+                    <input type="text" id="input-preparador-nome" placeholder="Ex: Junim, Ana..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500">
+                    <p class="text-[11px] text-slate-400">Sairá impresso no cabeçalho das vias do RawBT.</p>
+                </div>
+
+                <!-- Link / ID da Planilha Google -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-300">Link ou ID da Planilha Google Sheets</label>
+                    <input type="text" id="input-sheet-url" placeholder="Cole o Link ou ID da Planilha aqui..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500">
+                    <p class="text-[11px] text-slate-400">Cole a URL completa ou apenas o ID da planilha contendo a aba 'pedido'.</p>
+                </div>
+            </div>
+
+            <div class="pt-2 flex gap-2">
+                <button onclick="salvarConfiguracoes()" class="w-full py-3.5 bg-pink-500 hover:bg-pink-400 text-white font-black rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-pink-500/20">
+                    Salvar Configurações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CODE SCRIPT PRINCIPAL -->
     <script>
-        // CONFIGURAÇÕES E DADOS DA PLANILHA
-        const SHEET_ID = '1IxzUCFbGIxOMrCGnjfHNlB16ll64TKh75SDOV1oOnWw';
-        const TARIFA_KWH = 0.81;
-        const CUSTO_KWH_USINA = 0.175126;
+        // CHAVES DE MEMÓRIA NO LOCALSTORAGE
+        const KEY_STORAGE_PREPARADOR = "urban_acai_preparador_nome";
+        const KEY_STORAGE_SHEET_URL = "urban_acai_sheet_url";
 
-        const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-        let mesIndexAtual = new Date().getMonth();
+        let globalPedidosList = [];
+        let ordensProcessadasSet = new Set();
+        let primeiraCarga = true;
+        let pedidoModalAtual = { id: "", texto: "", zap: "" };
 
-        // Dados simulados para carregamento imediato ou caso ocorra falha de rede
-        let dadosLocais = [
-            { cliente: 'Adilson', mes: 'outubro', consumo: 850, pago: true },
-            { cliente: 'João', mes: 'outubro', consumo: 620, pago: true },
-            { cliente: 'Inquilino', mes: 'outubro', consumo: 410, pago: false }
-        ];
+        let preparadorAtual = localStorage.getItem(KEY_STORAGE_PREPARADOR) || "Junim";
+        let sheetUrlArmazenada = localStorage.getItem(KEY_STORAGE_SHEET_URL) || "";
 
-        window.onload = () => {
-            atualizarTela();
-            carregarDadosPlanilha();
-        };
-
-        function mudarMes(direcao) {
-            mesIndexAtual += direcao;
-            if (mesIndexAtual < 0) mesIndexAtual = 11;
-            if (mesIndexAtual > 11) mesIndexAtual = 0;
-            atualizarTela();
+        // REGISTRO DE SERVICE WORKER (PWA)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Registrado:', reg.scope))
+                    .catch(err => console.error('Erro ao registrar Service Worker:', err));
+            });
         }
 
-        function calcularLucroSocio(consumoKwh) {
-            const valorBruto = consumoKwh * TARIFA_KWH;
-            const faturamento = valorBruto * 0.80; // 20% desconto do cliente
-            const custoUsina = consumoKwh * CUSTO_KWH_USINA;
-            const lucroBase = faturamento - custoUsina;
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('label-preparador-nome').innerText = preparadorAtual;
+            document.getElementById('input-preparador-nome').value = preparadorAtual;
+            document.getElementById('input-sheet-url').value = sheetUrlArmazenada;
             
-            // Retorna exatamente a METADE (50%) para o sócio
-            return Math.max(0, lucroBase * 0.50);
+            if (!sheetUrlArmazenada) {
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('alert-no-sheet').classList.remove('hidden');
+            } else {
+                buscarPedidosAcaiSheet();
+            }
+
+            // Polling automático a cada 15 segundos
+            setInterval(buscarPedidosAcaiSheet, 15000);
+        });
+
+        // 1. GERENCIADOR DE MODAL E CONFIGURAÇÕES COM PERSISTÊNCIA (LOCALSTORAGE)
+        function abrirModalConfig() {
+            document.getElementById('input-preparador-nome').value = preparadorAtual;
+            document.getElementById('input-sheet-url').value = sheetUrlArmazenada;
+            document.getElementById('modal-config').classList.remove('hidden');
+            document.getElementById('modal-config').classList.add('flex');
         }
 
-        function atualizarTela() {
-            const nomeMes = MESES[mesIndexAtual];
-            document.getElementById('label-mes').innerText = nomeMes;
+        function fecharModalConfig() {
+            document.getElementById('modal-config').classList.remove('flex');
+            document.getElementById('modal-config').classList.add('hidden');
+        }
 
-            const container = document.getElementById('lista-clientes');
-            container.innerHTML = '';
+        function salvarConfiguracoes() {
+            const prepVal = document.getElementById('input-preparador-nome').value.trim();
+            const sheetVal = document.getElementById('input-sheet-url').value.trim();
 
-            let totalSocioMes = 0;
-            let clientesEncontrados = 0;
+            if (prepVal) {
+                preparadorAtual = prepVal;
+                localStorage.setItem(KEY_STORAGE_PREPARADOR, preparadorAtual);
+                document.getElementById('label-preparador-nome').innerText = preparadorAtual;
+            }
 
-            dadosLocais.forEach(item => {
-                if (item.mes.toLowerCase() === nomeMes) {
-                    clientesEncontrados++;
-                    const lucroSocio = calcularLucroSocio(item.consumo);
-                    totalSocioMes += lucroSocio;
+            if (sheetVal) {
+                sheetUrlArmazenada = sheetVal;
+                localStorage.setItem(KEY_STORAGE_SHEET_URL, sheetUrlArmazenada);
+                document.getElementById('alert-no-sheet').classList.add('hidden');
+            }
 
-                    const statusTexto = item.pago ? 'PAGO / RECEBIDO' : 'PENDENTE';
-                    const statusClasse = item.pago 
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
-                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+            fecharModalConfig();
+            showToast("Configurações salvas com sucesso! 💾");
+            buscarPedidosAcaiSheet();
+        }
 
-                    container.innerHTML += `
-                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-extrabold text-white capitalize">${item.cliente}</h3>
-                                <span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${statusClasse}">
-                                    ${statusTexto}
-                                </span>
+        // 2. CONVERSOR DE LINK GOOGLE SHEETS PARA ENDPOINT DE EXPORTAÇÃO CSV
+        function extrairUrlCsvPlanilha(inputUrlOrId) {
+            if (!inputUrlOrId) return "";
+            
+            let sheetId = inputUrlOrId.trim();
+            const match = inputUrlOrId.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (match && match[1]) {
+                sheetId = match[1];
+            }
+
+            return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=pedido`;
+        }
+
+        // 3. NOTIFICAÇÕES SONORAS E NATIVAS
+        function solicitarPermissaoNotificacao() {
+            if ("Notification" in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        showToast("Notificações em tempo real ativadas! 🔔");
+                    } else {
+                        showToast("Permissão de notificação negada.");
+                    }
+                });
+            } else {
+                showToast("Navegador não suporta notificações.");
+            }
+        }
+
+        function tocarSomNotificacao() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.35, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
+            } catch (e) {}
+        }
+
+        // 4. LEITURA E SINCRONIZAÇÃO COM A PLANILHA GOOGLE
+        function buscarPedidosAcaiSheet() {
+            if (!sheetUrlArmazenada) {
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('alert-no-sheet').classList.remove('hidden');
+                return;
+            }
+
+            const syncIcon = document.getElementById('sync-icon');
+            if (syncIcon) syncIcon.classList.add('animate-spin');
+
+            const csvEndpoint = extrairUrlCsvPlanilha(sheetUrlArmazenada);
+
+            Papa.parse(csvEndpoint, {
+                download: true,
+                header: false,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    if (syncIcon) syncIcon.classList.remove('animate-spin');
+                    processarDadosPlanilha(results.data);
+                },
+                error: (err) => {
+                    if (syncIcon) syncIcon.classList.remove('animate-spin');
+                    showToast("Erro ao conectar com a planilha. Verifique as configurações.");
+                }
+            });
+        }
+
+        // 5. PROCESSAMENTO E PARSING DOS DADOS DA PLANILHA
+        function processarDadosPlanilha(linhas) {
+            document.getElementById('loading-state').style.display = 'none';
+            const container = document.getElementById('pedidos-container');
+            container.classList.remove('hidden');
+
+            if (!linhas || linhas.length <= 1) {
+                container.innerHTML = `<div class="col-span-full glass-card p-12 text-center text-slate-400 font-semibold">Nenhum pedido localizado na aba 'pedido'.</div>`;
+                return;
+            }
+
+            const linhasPedidos = linhas.slice(1);
+            let novosPedidosDetectados = 0;
+            let totalCoposContados = 0;
+            globalPedidosList = [];
+
+            linhasPedidos.forEach((row, index) => {
+                if (row.length < 2 || !row[0].trim()) return;
+
+                // Coluna A (0): Cliente
+                // Coluna B (1): Pedido Consolidado
+                // Coluna C (2): Endereço / Mesa
+                // Coluna D (3): Data e Hora
+                // Coluna E (4): WhatsApp
+                const cliente = row[0] ? row[0].trim() : "Cliente";
+                const stringPedidoRaw = row[1] ? row[1].trim() : "";
+                const endereco = row[2] ? row[2].trim() : "Balcão / Retirada";
+                const dataHora = row[3] ? row[3].trim() : "Agora";
+                const whatsappRaw = row[4] ? row[4].trim() : "";
+                const whatsappClean = whatsappRaw.replace(/\D/g, "");
+
+                const orderId = index + 101;
+                const orderKey = `${cliente}_${dataHora}_${stringPedidoRaw.substring(0, 15)}`;
+
+                const itensFormatados = parseColunaBPedido(stringPedidoRaw);
+                totalCoposContados += itensFormatados.length;
+
+                if (!ordensProcessadasSet.has(orderKey)) {
+                    ordensProcessadasSet.add(orderKey);
+                    if (!primeiraCarga) {
+                        novosPedidosDetectados++;
+                        dispararNotificacaoNovoPedido(cliente, itensFormatados.length);
+                    }
+                }
+
+                let totalCalculado = 0;
+                itensFormatados.forEach(it => {
+                    const sizeNum = parseInt(it.size) || 300;
+                    totalCalculado += (sizeNum >= 500 ? 25.00 : 21.00);
+                });
+
+                globalPedidosList.push({
+                    orderId: orderId,
+                    orderKey: orderKey,
+                    cliente,
+                    rawPedido: stringPedidoRaw,
+                    itens: itensFormatados,
+                    endereco,
+                    dataHora,
+                    whatsapp: whatsappClean,
+                    whatsappRaw,
+                    totalStr: `R$ ${totalCalculado.toFixed(2).replace('.', ',')}`
+                });
+            });
+
+            globalPedidosList.reverse();
+
+            document.getElementById('stat-total-pedidos').innerText = globalPedidosList.length;
+            document.getElementById('stat-total-copos').innerText = totalCoposContados;
+            document.getElementById('stat-ultima-atualizacao').innerText = (new Date()).toLocaleTimeString('pt-BR');
+
+            if (novosPedidosDetectados > 0) {
+                tocarSomNotificacao();
+                showToast(`🔔 ${novosPedidosDetectados} novo(s) pedido(s) recebido(s)!`);
+            }
+
+            primeiraCarga = false;
+            renderizarCardsPedidos(globalPedidosList);
+        }
+
+        // 6. REGRAS DE PARSING DA COLUNA B DO GOOGLE SHEETS
+        function parseColunaBPedido(textoColunaB) {
+            if (!textoColunaB) return [];
+            
+            const partes = textoColunaB.split(/\s*\|\s*/);
+            const itensExtraidos = [];
+
+            partes.forEach(parte => {
+                if (!parte.trim()) return;
+
+                const idxDoisPontos = parte.indexOf(":");
+                let copoPart = parte;
+                let compPart = "";
+
+                if (idxDoisPontos !== -1) {
+                    copoPart = parte.substring(0, idxDoisPontos).trim();
+                    compPart = parte.substring(idxDoisPontos + 1).trim();
+                }
+
+                const matchMl = copoPart.match(/(\d+)\s*ml/i);
+                const sizeExtracted = matchMl ? matchMl[1] : "300";
+
+                let toppingsArr = [];
+                if (compPart && !compPart.toLowerCase().includes("puro")) {
+                    toppingsArr = compPart.split(',').map(c => c.trim()).filter(c => c !== "");
+                }
+
+                itensExtraidos.push({
+                    type: 'acai',
+                    size: sizeExtracted,
+                    name: copoPart,
+                    toppings: toppingsArr,
+                    complementosStr: compPart || "Puro (Sem adicionais)"
+                });
+            });
+
+            return itensExtraidos;
+        }
+
+        // 7. RENDERIZAÇÃO DOS CARDS
+        function renderizarCardsPedidos(lista) {
+            const container = document.getElementById('pedidos-container');
+            container.innerHTML = "";
+
+            if (lista.length === 0) {
+                container.innerHTML = `<div class="col-span-full glass-card p-12 text-center text-slate-400 font-semibold">Nenhum pedido localizado.</div>`;
+                return;
+            }
+
+            lista.forEach(pedido => {
+                const card = document.createElement('div');
+                card.className = "glass-card glass-card-hover rounded-3xl p-5 space-y-4 relative overflow-hidden flex flex-col justify-between";
+                card.id = 'order-card-' + pedido.orderId;
+
+                card.dataset.nome = pedido.cliente;
+                card.dataset.endereco = pedido.endereco;
+                card.dataset.pagamento = "PIX / Dinheiro";
+                card.dataset.tipo = pedido.endereco.toLowerCase().includes("mesa") ? "Mesa" : (pedido.endereco.toLowerCase().includes("balc") ? "Balcão" : "Entrega");
+                card.dataset.total = pedido.totalStr;
+                card.dataset.whatsapp = pedido.whatsappRaw || pedido.whatsapp || "Nao informado";
+
+                let htmlItens = "";
+                pedido.itens.forEach((item, idx) => {
+                    htmlItens += `
+                        <div class="bg-slate-900/80 border border-white/5 rounded-2xl p-3.5 space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-md bg-pink-500/20 text-pink-400 font-black text-[10px] flex items-center justify-center">${idx + 1}</span>
+                                <h4 class="font-bold text-white text-xs">${item.name}</h4>
                             </div>
-                            <div class="text-right">
-                                <span class="text-xs text-slate-400 font-medium block">Sua Parte</span>
-                                <span class="text-xl font-black text-emerald-400">
-                                    R$ ${lucroSocio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                            </div>
+                            <p class="text-[11px] text-slate-300 font-medium pl-7 leading-relaxed">
+                                <span class="text-pink-400/80 font-bold">✨ Adicionais:</span> ${item.complementosStr}
+                            </p>
                         </div>
                     `;
+                });
+
+                const jsonItensStr = JSON.stringify(pedido.itens);
+
+                card.innerHTML = `
+                    <div>
+                        <input type="hidden" id="json-itens-${pedido.orderId}" value='${jsonItensStr}'>
+
+                        <div class="flex justify-between items-start gap-2 mb-3">
+                            <div>
+                                <span class="text-[10px] font-black text-pink-400 tracking-wider">PEDIDO #${pedido.orderId}</span>
+                                <h3 class="font-extrabold text-white text-base tracking-tight capitalize leading-snug">${pedido.cliente}</h3>
+                                <span class="text-[11px] text-slate-400 font-semibold flex items-center gap-1.5 mt-0.5">
+                                    <i class="fa-regular fa-clock text-pink-400"></i> ${pedido.dataHora}
+                                </span>
+                            </div>
+                            <span class="bg-pink-500/15 border border-pink-500/30 text-pink-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider flex-shrink-0">
+                                ${pedido.itens.length} Copo(s)
+                            </span>
+                        </div>
+
+                        <div class="text-xs text-slate-300 font-medium flex items-start gap-2 bg-slate-950/50 p-3 rounded-xl border border-white/5 mb-3">
+                            <i class="fa-solid fa-location-dot text-pink-400 mt-0.5"></i>
+                            <span class="break-words">${pedido.endereco}</span>
+                        </div>
+
+                        <div class="space-y-2">
+                            ${htmlItens}
+                        </div>
+                    </div>
+
+                    <div class="pt-4 grid grid-cols-2 gap-2 border-t border-white/5 mt-3">
+                        <button onclick="imprimirCompactoRawBT(${pedido.orderId}, preparadorAtual)" class="py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-lg shadow-amber-500/15">
+                            <i class="fa-solid fa-print text-xs"></i>
+                            <span>Imprimir RawBT</span>
+                        </button>
+                        
+                        <button onclick="gerarEAbrirModalWhatsapp('${pedido.orderId}')" class="py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-lg shadow-emerald-500/15">
+                            <i class="fa-brands fa-whatsapp text-xs"></i>
+                            <span>WhatsApp</span>
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // 8. IMPRESSÃO BLINDADA RAWBT
+        function imprimirCompactoRawBT(orderId, preparadorNome) {
+            const card = document.getElementById('order-card-' + orderId);
+            if (!card) return showToast("Pedido não encontrado.");
+
+            const nome = card.dataset.nome || "Cliente";
+            const endereco = card.dataset.endereco || "";
+            const pagamento = card.dataset.pagamento || "Não informado";
+            const tipoEntrega = card.dataset.tipo || "Balcão";
+            const totalPedido = card.dataset.total || "R$ 0,00";
+            let whatsapp = card.dataset.whatsapp || "";
+            
+            if (!whatsapp || whatsapp.trim() === "" || whatsapp === "00000000000" || whatsapp === "0" || whatsapp.includes("Nao")) {
+                whatsapp = "Nao informado";
+            }
+
+            let itens = [];
+            try { 
+                const inputJson = document.getElementById('json-itens-' + orderId).value;
+                itens = JSON.parse(inputJson); 
+            } catch(e) {
+                console.error("Erro na leitura do JSON", e);
+            }
+
+            let d = new Date();
+            let dataStr = ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth()+1)).slice(-2) + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+
+            let qtdItens = 0;
+            itens.forEach((item) => {
+                if (item.type === 'picole') {
+                    qtdItens += parseInt(item.qty) || 1;
+                } else {
+                    qtdItens += 1;
                 }
             });
 
-            if (clientesEncontrados === 0) {
-                container.innerHTML = `
-                    <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 text-center text-slate-400">
-                        <i class="fa-solid fa-folder-open text-2xl mb-2 text-slate-600 block"></i>
-                        Nenhum registro em ${nomeMes}.
-                    </div>
-                `;
+            let txt = "";
+            txt += "[C]========== URBAN ACAI ==========\n";
+            txt += `PEDIDO: #${orderId}\n`;
+            txt += `DATA: ${dataStr}\n`;
+            txt += `CLIENTE: ${nome}\n`;
+            txt += `WHATSAPP: ${whatsapp}\n`;
+            
+            if (tipoEntrega === 'Comer Aqui' || tipoEntrega === 'Mesa') {
+                txt += `TIPO: MESA - ${endereco.toUpperCase()}\n`;
+            } else if (tipoEntrega === 'Entrega') {
+                txt += `TIPO: ENTREGA\nEND: ${endereco}\n`;
+            } else {
+                txt += `TIPO: RETIRADA NO BALCAO\n`;
             }
+            
+            txt += `PAGAMENTO: ${pagamento.toUpperCase()}\n`;
+            txt += `Total: ${totalPedido} Reais\n`;
+            txt += `FEITO POR: ${preparadorNome.toUpperCase()}\n\n`;
+            txt += "--------------------------------\n";
 
-            document.getElementById('lucro-total-socio').innerText = `R$ ${totalSocioMes.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('qtd-clientes').innerText = `${clientesEncontrados} Cliente(s)`;
-        }
-
-        async function carregarDadosPlanilha() {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
-            try {
-                const res = await fetch(url);
-                if (res.ok) {
-                    const text = await res.text();
-                    const linhas = text.split('\n').slice(1);
-                    const novosDados = [];
-
-                    linhas.forEach(linha => {
-                        const colunas = linha.split(',').map(c => c.replace(/"/g, '').trim());
-                        if (colunas.length >= 5) {
-                            const cliente = colunas[2];
-                            const consumo = parseFloat(colunas[1]) || 0;
-                            const mes = colunas[4] ? colunas[4].toLowerCase() : '';
-                            const status = colunas[6] ? colunas[6].toLowerCase() : '';
-
-                            if (cliente && mes) {
-                                novosDados.push({
-                                    cliente: cliente,
-                                    mes: mes,
-                                    consumo: consumo,
-                                    pago: status.includes('pago')
-                                });
-                            }
-                        }
-                    });
-
-                    if (novosDados.length > 0) {
-                        dadosLocais = novosDados;
-                        atualizarTela();
+            itens.forEach((item) => {
+                if(item.type === 'picole') {
+                    txt += `${item.qty}x PICOLE ${item.name.toUpperCase()}\n`;
+                } else {
+                    txt += `1x ACAI ${item.size}ML\n`;
+                    let comps = [];
+                    if(item.toppings) comps = comps.concat(item.toppings);
+                    if(item.paid_toppings) comps = comps.concat(item.paid_toppings.map(p => p.name));
+                    if(comps.length > 0) {
+                        txt += `    + ${comps.join(', ')}\n`;
+                    } else {
+                        txt += `    (PURO)\n`;
                     }
                 }
-            } catch (e) {
-                console.log('Usando dados de reserva.');
+            });
+
+            txt += "--------------------------------\n\n";
+            txt += `QTD DE ITENS: ${qtdItens}\n\n`;
+            txt += "Instagram: @urban.acai\n";
+            txt += "[C]================================\n\n\n";
+
+            const rawbtIntentUrl = "intent:" + encodeURIComponent(txt) + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
+            window.location.href = rawbtIntentUrl;
+            showToast("Enviando comando para o RawBT... 🖨️");
+        }
+
+        // 9. WHATSAPP & MODAIS DE COMPROVANTE
+        function gerarEAbrirModalWhatsapp(orderId) {
+            const pedido = globalPedidosList.find(p => p.orderId == orderId);
+            if (!pedido) return;
+
+            let msg = `🍧 *URBAN AÇAÍ - PEDIDO #${pedido.orderId}*\n`;
+            msg += `------------------------------------------\n`;
+            msg += `👤 *Cliente:* ${pedido.cliente}\n`;
+            msg += `📞 *Contato:* ${pedido.whatsappRaw || 'Não informado'}\n`;
+            msg += `📍 *Endereço:* ${pedido.endereco}\n`;
+            msg += `🕒 *Data/Hora:* ${pedido.dataHora}\n`;
+            msg += `------------------------------------------\n`;
+            msg += `🛒 *ITENS DO PEDIDO:*\n\n`;
+
+            pedido.itens.forEach((item, i) => {
+                msg += `▪️ *${item.name}*\n`;
+                msg += `   ✨ *Adicionais:* ${item.complementosStr}\n\n`;
+            });
+
+            msg += `------------------------------------------\n`;
+            msg += `🚀 *Pedido em separação e produção!*`;
+
+            pedidoModalAtual.id = pedido.orderId;
+            pedidoModalAtual.texto = msg;
+            pedidoModalAtual.zap = pedido.whatsapp;
+
+            document.getElementById('ticket-text-preview').innerText = msg;
+            
+            const btnRawbtModal = document.getElementById('btn-modal-print-rawbt');
+            btnRawbtModal.onclick = () => imprimirCompactoRawBT(pedido.orderId, preparadorAtual);
+
+            const phoneParam = pedido.whatsapp ? (pedido.whatsapp.startsWith('55') ? pedido.whatsapp : `55${pedido.whatsapp}`) : "";
+            document.getElementById('btn-link-whatsapp').href = `https://wa.me/${phoneParam}?text=${encodeURIComponent(msg)}`;
+
+            const modal = document.getElementById('modal-whatsapp');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function fecharModalWhatsapp() {
+            const modal = document.getElementById('modal-whatsapp');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function copiarTextoPedido() {
+            if (!pedidoModalAtual.texto) return;
+            navigator.clipboard.writeText(pedidoModalAtual.texto).then(() => {
+                showToast("Texto copiado para a área de transferência! 📋");
+            }).catch(() => {
+                showToast("Falha ao copiar texto.");
+            });
+        }
+
+        function dispararNotificacaoNovoPedido(cliente, qtdItens) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("🍧 Urban Açaí - Novo Pedido!", {
+                    body: `${cliente} fez um pedido com ${qtdItens} item(ns).`,
+                    icon: "./urban.jpg"
+                });
             }
         }
 
-        function recarregarDados() {
-            carregarDadosPlanilha();
+        function filtrarPedidos() {
+            const query = document.getElementById('input-busca').value.toLowerCase().trim();
+            const filtrados = globalPedidosList.filter(p => 
+                p.cliente.toLowerCase().includes(query) ||
+                p.endereco.toLowerCase().includes(query) ||
+                p.rawPedido.toLowerCase().includes(query) ||
+                String(p.orderId).includes(query)
+            );
+            renderizarCardsPedidos(filtrados);
+        }
+
+        function showToast(mensagem) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = "bg-slate-900 border border-white/15 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 pointer-events-auto animate-in slide-in-from-top-4 duration-300";
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-pink-400"></i> ${mensagem}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
         }
     </script>
 </body>
