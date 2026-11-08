@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Urban Açaí - Gestão & Impressão</title>
+    <title>Urban Açaí - Gestão</title>
 
     <!-- Configurações PWA -->
     <link rel="manifest" href="./manifest.json">
@@ -44,13 +44,13 @@
         }
     </script>
 
-    <!-- OneSignal Web SDK -->
+    <!-- OneSignal Web SDK v16 (Com o seu AppID configurado) -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(async function(OneSignal) {
             await OneSignal.init({
-                appId: "919f0630-7d73-451a-8818-c1be42435f0d",
+                appId: "67ff1349-714a-4230-947b-eb9d4410756e",
                 notifyButton: { enable: true },
                 allowLocalhostAsSecureOrigin: true,
             });
