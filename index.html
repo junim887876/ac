@@ -2,10 +2,11 @@
 <html lang="pt-BR" class="dark">
 <head>
     <meta charset="UTF-8">
+    <!-- Viewport otimizada para iPhone 14 Pro e Dynamic Island -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Urban Gestão</title>
+    <title>Urban Açaí - Gestão & Impressão</title>
 
-    <!-- Configurações PWA -->
+    <!-- Configurações PWA e iOS -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0b0f19">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="UrbanAçaí">
     <link rel="apple-touch-icon" href="./urban.jpg">
 
-    <!-- CDNs: Fontes, Ícones e Utilitários -->
+    <!-- CDNs: Fontes e Ícones -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -44,15 +45,17 @@
         }
     </script>
 
-    <!-- OneSignal Web SDK v16 (Com o seu AppID configurado) -->
+    <!-- OneSignal Web SDK v16 (Inicialização Direta) -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(async function(OneSignal) {
             await OneSignal.init({
                 appId: "67ff1349-714a-4230-947b-eb9d4410756e",
-                notifyButton: { enable: true },
-                allowLocalhostAsSecureOrigin: true,
+                serviceWorkerParam: { scope: "/" },
+                serviceWorkerPath: "OneSignalSDKWorker.js",
+                notifyButton: { enable: false }, // Usamos botão customizado na interface
+                allowLocalhostAsSecureOrigin: true
             });
         });
     </script>
@@ -61,12 +64,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <style>
+        :root {
+            --sat: env(safe-area-inset-top, 0px);
+            --sab: env(safe-area-inset-bottom, 0px);
+            --sal: env(safe-area-inset-left, 0px);
+            --sar: env(safe-area-inset-right, 0px);
+        }
+
         body {
             background-color: #0b0f19;
             color: #f8fafc;
             font-family: 'Plus Jakarta Sans', sans-serif;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
+            padding-left: var(--sal);
+            padding-right: var(--sar);
+            padding-bottom: calc(var(--sab) + 24px);
+        }
+
+        .header-safe {
+            padding-top: calc(var(--sat) + 12px);
         }
 
         .glass-card {
@@ -111,13 +128,13 @@
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 6px; }
     </style>
 </head>
-<body class="min-h-screen pb-16 antialiased selection:bg-pink-500 selection:text-white">
+<body class="min-h-screen antialiased selection:bg-pink-500 selection:text-white">
 
-    <!-- TOAST CONTAINER -->
-    <div id="toast-container" class="fixed top-4 right-4 left-4 sm:left-auto sm:w-96 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <!-- TOAST CONTAINER COM SUPORTE À SAFE-AREA -->
+    <div id="toast-container" class="fixed top-4 right-4 left-4 sm:left-auto sm:w-96 z-50 flex flex-col gap-2 pointer-events-none" style="margin-top: var(--sat);"></div>
 
-    <!-- HEADER -->
-    <header class="sticky top-0 z-40 bg-[#0b0f19]/85 backdrop-blur-md border-b border-white/10 px-4 py-3.5">
+    <!-- HEADER AJUSTADO PARA IPHONE 14 PRO (DYNAMIC ISLAND) -->
+    <header class="sticky top-0 z-40 bg-[#0b0f19]/90 backdrop-blur-md border-b border-white/10 px-4 pb-3.5 header-safe">
         <div class="max-w-5xl mx-auto flex justify-between items-center gap-2">
             <div class="flex items-center gap-3">
                 <img src="./urban.jpg" alt="Urban Açaí" class="w-11 h-11 rounded-2xl object-cover border border-pink-500/40 shadow-lg shadow-pink-500/20" onerror="this.src='https://via.placeholder.com/100?text=Açai'">
@@ -127,24 +144,24 @@
                         <span class="text-[10px] bg-pink-500/20 text-pink-400 font-extrabold px-2 py-0.5 rounded-md border border-pink-500/30">PRO</span>
                     </h1>
                     <p class="text-xs text-slate-400 font-semibold mt-1 flex items-center gap-2">
-                        <span class="pulse-live"></span> Sistema de Vendas & Térmica
+                        <span class="pulse-live"></span> Gestão ao Vivo
                     </p>
                 </div>
             </div>
 
             <div class="flex items-center gap-2">
-                <!-- Botão de Configuração (Preparador & Planilha) -->
-                <button onclick="abrirModalConfig()" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95 border border-white/10 flex items-center gap-2" title="Configurações do Sistema">
+                <!-- Botão de Configuração -->
+                <button onclick="abrirModalConfig()" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95 border border-white/10 flex items-center gap-2" title="Configurações">
                     <i class="fa-solid fa-gear text-xs text-pink-400"></i>
                     <span id="label-preparador-nome" class="hidden md:inline text-xs font-bold text-slate-200">Junim</span>
                 </button>
 
-                <!-- Notificações Nativas -->
-                <button onclick="solicitarPermissaoNotificacao()" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95 border border-white/10" title="Ativar Notificações">
+                <!-- Notificações Push / Nativa -->
+                <button id="btn-onesignal-notif" onclick="solicitarPermissaoNotificacao()" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95 border border-white/10" title="Ativar Notificações">
                     <i class="fa-solid fa-bell text-xs"></i>
                 </button>
 
-                <!-- Sincronização Manual -->
+                <!-- Atualizar Manualmente -->
                 <button onclick="buscarPedidosAcaiSheet()" class="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-lg shadow-pink-500/20 transition active:scale-95">
                     <i class="fa-solid fa-rotate text-xs" id="sync-icon"></i>
                     <span class="hidden sm:inline">Atualizar</span>
@@ -154,7 +171,7 @@
     </header>
 
     <!-- CONTEÚDO PRINCIPAL -->
-    <main class="max-w-5xl mx-auto px-4 pt-5 space-y-5">
+    <main class="max-w-5xl mx-auto px-4 pt-4 space-y-5">
 
         <!-- ALERTA PLANILHA NÃO CONFIGURADA -->
         <div id="alert-no-sheet" class="hidden glass-card p-5 rounded-2xl border-l-4 border-l-amber-500 bg-amber-500/10 space-y-3">
@@ -163,46 +180,46 @@
                 <h3 class="font-extrabold text-sm">Planilha Google Não Configurada</h3>
             </div>
             <p class="text-xs text-slate-300 leading-relaxed">
-                Você ainda não inseriu o link ou ID da planilha Google Sheets. Clique no botão abaixo para adicionar. A informação ficará salva automaticamente no seu navegador.
+                Você ainda não inseriu o link ou ID da planilha Google Sheets. Cole abaixo o link da sua planilha para começar a ler os pedidos.
             </p>
             <button onclick="abrirModalConfig()" class="px-4 py-2 bg-amber-500 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider transition active:scale-95">
-                Configurar Agora
+                Configurar Planilha
             </button>
         </div>
 
-        <!-- METRICAS -->
+        <!-- CARDS DE INFORMAÇÕES -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div class="glass-card p-4 rounded-2xl border-l-4 border-l-pink-500">
+            <div class="glass-card p-3.5 sm:p-4 rounded-2xl border-l-4 border-l-pink-500">
                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Pedidos Lidos</span>
-                <h3 id="stat-total-pedidos" class="text-2xl font-black text-white">0</h3>
+                <h3 id="stat-total-pedidos" class="text-xl sm:text-2xl font-black text-white">0</h3>
             </div>
-            <div class="glass-card p-4 rounded-2xl border-l-4 border-l-purple-500">
+            <div class="glass-card p-3.5 sm:p-4 rounded-2xl border-l-4 border-l-purple-500">
                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Copos Vendidos</span>
-                <h3 id="stat-total-copos" class="text-2xl font-black text-purple-400">0</h3>
+                <h3 id="stat-total-copos" class="text-xl sm:text-2xl font-black text-purple-400">0</h3>
             </div>
-            <div class="glass-card p-4 rounded-2xl border-l-4 border-l-emerald-500">
-                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Status Impressora</span>
-                <div class="flex items-center gap-2 mt-1">
-                    <i class="fa-solid fa-print text-emerald-400 text-base"></i>
-                    <span class="text-xs font-bold text-emerald-400">RawBT Pronta</span>
+            <div class="glass-card p-3.5 sm:p-4 rounded-2xl border-l-4 border-l-emerald-500">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Impressora</span>
+                <div class="flex items-center gap-1.5 mt-1">
+                    <i class="fa-solid fa-print text-emerald-400 text-xs sm:text-sm"></i>
+                    <span class="text-xs font-bold text-emerald-400 truncate">RawBT OK</span>
                 </div>
             </div>
-            <div class="glass-card p-4 rounded-2xl border-l-4 border-l-amber-500 col-span-2 sm:col-span-1">
+            <div class="glass-card p-3.5 sm:p-4 rounded-2xl border-l-4 border-l-amber-500 col-span-2 sm:col-span-1">
                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Última Leitura</span>
-                <h3 id="stat-ultima-atualizacao" class="text-xs font-bold text-slate-200 mt-1.5">--:--:--</h3>
+                <h3 id="stat-ultima-atualizacao" class="text-xs font-bold text-slate-200 mt-1">--:--:--</h3>
             </div>
         </div>
 
         <!-- BARRA DE BUSCA -->
         <div class="relative">
             <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-            <input type="text" id="input-busca" onkeyup="filtrarPedidos()" placeholder="Buscar por cliente, endereço, bairro ou copo..." class="w-full bg-slate-900/90 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500/80 transition shadow-inner">
+            <input type="text" id="input-busca" onkeyup="filtrarPedidos()" placeholder="Buscar por cliente, bairro, copo..." class="w-full bg-slate-900/90 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500/80 transition shadow-inner">
         </div>
 
         <!-- INDICADOR DE CARREGAMENTO -->
-        <div id="loading-state" class="text-center py-20 space-y-3">
+        <div id="loading-state" class="text-center py-16 space-y-3">
             <i class="fa-solid fa-circle-notch text-4xl text-pink-500 animate-spin"></i>
-            <p class="text-sm font-semibold text-slate-400">Carregando pedidos da planilha...</p>
+            <p class="text-sm font-semibold text-slate-400">Sincronizando com o Google Sheets...</p>
         </div>
 
         <!-- CONTAINER DOS PEDIDOS -->
@@ -212,7 +229,7 @@
 
     <!-- MODAL COMPROVANTE & WHATSAPP -->
     <div id="modal-whatsapp" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 transition-all duration-300">
-        <div class="glass-card w-full max-w-lg rounded-3xl p-6 space-y-4 border border-white/15 animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col justify-between">
+        <div class="glass-card w-full max-w-lg rounded-3xl p-5 sm:p-6 space-y-4 border border-white/15 max-h-[88vh] flex flex-col justify-between">
             
             <div class="flex justify-between items-center pb-3 border-b border-white/10 flex-shrink-0">
                 <div class="flex items-center gap-2 text-emerald-400 font-extrabold text-base">
@@ -225,11 +242,11 @@
             </div>
 
             <div class="space-y-1 flex-1 overflow-hidden flex flex-col">
-                <label class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Preview para Envio / Impressão</label>
-                <pre id="ticket-text-preview" class="w-full bg-slate-950/90 border border-slate-800 rounded-2xl p-4 text-xs font-mono text-slate-200 whitespace-pre-wrap overflow-y-auto leading-relaxed border-dashed flex-1"></pre>
+                <label class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Texto para WhatsApp / Impressão</label>
+                <pre id="ticket-text-preview" class="w-full bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 text-xs font-mono text-slate-200 whitespace-pre-wrap overflow-y-auto leading-relaxed border-dashed flex-1"></pre>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 flex-shrink-0">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 flex-shrink-0">
                 <button onclick="copiarTextoPedido()" class="py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition active:scale-95 border border-white/10">
                     <i class="fa-solid fa-copy text-pink-400"></i>
                     <span>Copiar</span>
@@ -248,13 +265,13 @@
         </div>
     </div>
 
-    <!-- MODAL UNIFICADO DE CONFIGURAÇÕES (PREPARADOR E PLANILHA GOOGLE) -->
+    <!-- MODAL DE CONFIGURAÇÕES -->
     <div id="modal-config" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
         <div class="glass-card w-full max-w-md rounded-3xl p-6 space-y-4 border border-white/15">
             <div class="flex justify-between items-center pb-2 border-b border-white/10">
                 <h3 class="font-extrabold text-white text-base flex items-center gap-2">
                     <i class="fa-solid fa-sliders text-pink-400"></i>
-                    Configurações do Sistema
+                    Configurações
                 </h3>
                 <button onclick="fecharModalConfig()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-400 hover:text-white">
                     <i class="fa-solid fa-xmark"></i>
@@ -262,32 +279,29 @@
             </div>
 
             <div class="space-y-4">
-                <!-- Nome do Preparador -->
                 <div class="space-y-1.5">
                     <label class="text-xs font-bold text-slate-300">Nome do Atendente / Preparador</label>
                     <input type="text" id="input-preparador-nome" placeholder="Ex: Junim, Ana..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500">
-                    <p class="text-[11px] text-slate-400">Sairá impresso no cabeçalho das vias do RawBT.</p>
+                    <p class="text-[11px] text-slate-400">Impresso no cabeçalho das vias do RawBT.</p>
                 </div>
 
-                <!-- Link / ID da Planilha Google -->
                 <div class="space-y-1.5">
                     <label class="text-xs font-bold text-slate-300">Link ou ID da Planilha Google Sheets</label>
-                    <input type="text" id="input-sheet-url" placeholder="Cole o Link ou ID da Planilha aqui..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500">
-                    <p class="text-[11px] text-slate-400">Cole a URL completa ou apenas o ID da planilha contendo a aba 'pedido'.</p>
+                    <input type="text" id="input-sheet-url" placeholder="Cole o Link ou ID aqui..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500">
+                    <p class="text-[11px] text-slate-400">Salvo automaticamente no navegador.</p>
                 </div>
             </div>
 
-            <div class="pt-2 flex gap-2">
+            <div class="pt-2">
                 <button onclick="salvarConfiguracoes()" class="w-full py-3.5 bg-pink-500 hover:bg-pink-400 text-white font-black rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-pink-500/20">
-                    Salvar Configurações
+                    Salvar Alterações
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- CODE SCRIPT PRINCIPAL -->
+    <!-- SCRIPT PRINCIPAL -->
     <script>
-        // CHAVES DE MEMÓRIA NO LOCALSTORAGE
         const KEY_STORAGE_PREPARADOR = "urban_acai_preparador_nome";
         const KEY_STORAGE_SHEET_URL = "urban_acai_sheet_url";
 
@@ -299,12 +313,12 @@
         let preparadorAtual = localStorage.getItem(KEY_STORAGE_PREPARADOR) || "Junim";
         let sheetUrlArmazenada = localStorage.getItem(KEY_STORAGE_SHEET_URL) || "";
 
-        // REGISTRO DE SERVICE WORKER (PWA)
+        // REGISTRO DO SERVICE WORKER
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker Registrado:', reg.scope))
-                    .catch(err => console.error('Erro ao registrar Service Worker:', err));
+                    .then(reg => console.log('SW ativo:', reg.scope))
+                    .catch(err => console.error('Erro no SW:', err));
             });
         }
 
@@ -320,11 +334,9 @@
                 buscarPedidosAcaiSheet();
             }
 
-            // Polling automático a cada 15 segundos
             setInterval(buscarPedidosAcaiSheet, 15000);
         });
 
-        // 1. GERENCIADOR DE MODAL E CONFIGURAÇÕES COM PERSISTÊNCIA (LOCALSTORAGE)
         function abrirModalConfig() {
             document.getElementById('input-preparador-nome').value = preparadorAtual;
             document.getElementById('input-sheet-url').value = sheetUrlArmazenada;
@@ -354,35 +366,47 @@
             }
 
             fecharModalConfig();
-            showToast("Configurações salvas com sucesso! 💾");
+            showToast("Configurações salvas! 💾");
             buscarPedidosAcaiSheet();
         }
 
-        // 2. CONVERSOR DE LINK GOOGLE SHEETS PARA ENDPOINT DE EXPORTAÇÃO CSV
         function extrairUrlCsvPlanilha(inputUrlOrId) {
             if (!inputUrlOrId) return "";
-            
             let sheetId = inputUrlOrId.trim();
             const match = inputUrlOrId.match(/\/d\/([a-zA-Z0-9-_]+)/);
             if (match && match[1]) {
                 sheetId = match[1];
             }
-
             return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=pedido`;
         }
 
-        // 3. NOTIFICAÇÕES SONORAS E NATIVAS
-        function solicitarPermissaoNotificacao() {
+        // PERMISSÃO DE NOTIFICAÇÃO ATUALIZADA COM COMPATIBILIDADE ONESIGNAL + SAFARI / IOS
+        async function solicitarPermissaoNotificacao() {
+            if (window.OneSignalDeferred) {
+                window.OneSignalDeferred.push(async function(OneSignal) {
+                    try {
+                        await OneSignal.Notifications.requestPermission();
+                        showToast("Notificações OneSignal Ativadas! 🔔");
+                    } catch(e) {
+                        solicitarPermissaoNativaFallback();
+                    }
+                });
+            } else {
+                solicitarPermissaoNativaFallback();
+            }
+        }
+
+        function solicitarPermissaoNativaFallback() {
             if ("Notification" in window) {
                 Notification.requestPermission().then(permission => {
                     if (permission === "granted") {
-                        showToast("Notificações em tempo real ativadas! 🔔");
+                        showToast("Notificações Locais Ativadas! 🔔");
                     } else {
                         showToast("Permissão de notificação negada.");
                     }
                 });
             } else {
-                showToast("Navegador não suporta notificações.");
+                showToast("Este navegador não suporta Notificações.");
             }
         }
 
@@ -403,7 +427,6 @@
             } catch (e) {}
         }
 
-        // 4. LEITURA E SINCRONIZAÇÃO COM A PLANILHA GOOGLE
         function buscarPedidosAcaiSheet() {
             if (!sheetUrlArmazenada) {
                 document.getElementById('loading-state').style.display = 'none';
@@ -426,12 +449,11 @@
                 },
                 error: (err) => {
                     if (syncIcon) syncIcon.classList.remove('animate-spin');
-                    showToast("Erro ao conectar com a planilha. Verifique as configurações.");
+                    showToast("Erro de leitura na planilha.");
                 }
             });
         }
 
-        // 5. PROCESSAMENTO E PARSING DOS DADOS DA PLANILHA
         function processarDadosPlanilha(linhas) {
             document.getElementById('loading-state').style.display = 'none';
             const container = document.getElementById('pedidos-container');
@@ -450,11 +472,6 @@
             linhasPedidos.forEach((row, index) => {
                 if (row.length < 2 || !row[0].trim()) return;
 
-                // Coluna A (0): Cliente
-                // Coluna B (1): Pedido Consolidado
-                // Coluna C (2): Endereço / Mesa
-                // Coluna D (3): Data e Hora
-                // Coluna E (4): WhatsApp
                 const cliente = row[0] ? row[0].trim() : "Cliente";
                 const stringPedidoRaw = row[1] ? row[1].trim() : "";
                 const endereco = row[2] ? row[2].trim() : "Balcão / Retirada";
@@ -504,14 +521,13 @@
 
             if (novosPedidosDetectados > 0) {
                 tocarSomNotificacao();
-                showToast(`🔔 ${novosPedidosDetectados} novo(s) pedido(s) recebido(s)!`);
+                showToast(`🔔 ${novosPedidosDetectados} novo(s) pedido(s)!`);
             }
 
             primeiraCarga = false;
             renderizarCardsPedidos(globalPedidosList);
         }
 
-        // 6. REGRAS DE PARSING DA COLUNA B DO GOOGLE SHEETS
         function parseColunaBPedido(textoColunaB) {
             if (!textoColunaB) return [];
             
@@ -550,7 +566,6 @@
             return itensExtraidos;
         }
 
-        // 7. RENDERIZAÇÃO DOS CARDS
         function renderizarCardsPedidos(lista) {
             const container = document.getElementById('pedidos-container');
             container.innerHTML = "";
@@ -562,7 +577,7 @@
 
             lista.forEach(pedido => {
                 const card = document.createElement('div');
-                card.className = "glass-card glass-card-hover rounded-3xl p-5 space-y-4 relative overflow-hidden flex flex-col justify-between";
+                card.className = "glass-card glass-card-hover rounded-3xl p-4 sm:p-5 space-y-4 relative overflow-hidden flex flex-col justify-between";
                 card.id = 'order-card-' + pedido.orderId;
 
                 card.dataset.nome = pedido.cliente;
@@ -575,7 +590,7 @@
                 let htmlItens = "";
                 pedido.itens.forEach((item, idx) => {
                     htmlItens += `
-                        <div class="bg-slate-900/80 border border-white/5 rounded-2xl p-3.5 space-y-1">
+                        <div class="bg-slate-900/80 border border-white/5 rounded-2xl p-3 space-y-1">
                             <div class="flex items-center gap-2">
                                 <span class="w-5 h-5 rounded-md bg-pink-500/20 text-pink-400 font-black text-[10px] flex items-center justify-center">${idx + 1}</span>
                                 <h4 class="font-bold text-white text-xs">${item.name}</h4>
@@ -633,7 +648,6 @@
             });
         }
 
-        // 8. IMPRESSÃO BLINDADA RAWBT
         function imprimirCompactoRawBT(orderId, preparadorNome) {
             const card = document.getElementById('order-card-' + orderId);
             if (!card) return showToast("Pedido não encontrado.");
@@ -715,7 +729,6 @@
             showToast("Enviando comando para o RawBT... 🖨️");
         }
 
-        // 9. WHATSAPP & MODAIS DE COMPROVANTE
         function gerarEAbrirModalWhatsapp(orderId) {
             const pedido = globalPedidosList.find(p => p.orderId == orderId);
             if (!pedido) return;
@@ -763,7 +776,7 @@
         function copiarTextoPedido() {
             if (!pedidoModalAtual.texto) return;
             navigator.clipboard.writeText(pedidoModalAtual.texto).then(() => {
-                showToast("Texto copiado para a área de transferência! 📋");
+                showToast("Texto copiado! 📋");
             }).catch(() => {
                 showToast("Falha ao copiar texto.");
             });
